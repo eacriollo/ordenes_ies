@@ -24,4 +24,9 @@ class Material extends Model
             ->withTimestamps();
     }
 
+    public function serializado()
+    {
+        return $this->hasMany(Serializado::class, 'material_id');
+    }
+
 }

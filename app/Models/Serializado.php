@@ -20,4 +20,6 @@ class serializado extends Model
        return $this->belongsTo(Material::class);
    }
 
+
+
 }
