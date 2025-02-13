@@ -9,4 +9,11 @@ use Filament\Resources\Pages\EditRecord;
 class EditAbonado extends EditRecord
 {
     protected static string $resource = AbonadoResource::class;
+
+    protected function  getHeaderActions(): array
+    {
+        return [
+            Actions\DeleteAction::make(),
+        ];
+    }
 }

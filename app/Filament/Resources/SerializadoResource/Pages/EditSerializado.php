@@ -9,4 +9,11 @@ use Filament\Resources\Pages\EditRecord;
 class EditSerializado extends EditRecord
 {
     protected static string $resource = SerializadoResource::class;
+
+    protected function  getHeaderActions(): array
+    {
+        return [
+            Actions\DeleteAction::make(),
+        ];
+    }
 }

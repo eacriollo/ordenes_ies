@@ -9,4 +9,11 @@ use Filament\Resources\Pages\ListRecords;
 class ListSerializados extends ListRecords
 {
     protected static string $resource = SerializadoResource::class;
+
+    protected function  getHeaderActions(): array
+    {
+        return [
+            Actions\CreateAction::make(),
+        ];
+    }
 }

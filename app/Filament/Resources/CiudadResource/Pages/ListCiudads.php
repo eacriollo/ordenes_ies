@@ -9,4 +9,11 @@ use Filament\Resources\Pages\ListRecords;
 class ListCiudads extends ListRecords
 {
     protected static string $resource = CiudadResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\CreateAction::make()->label('Nueva Ciudad'),
+        ];
+    }
 }

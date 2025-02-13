@@ -21,6 +21,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Forms\Components\Repeater;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use function Laravel\Prompts\alert;
 
 class Ingreso extends Page /*implements HasForms*/
@@ -44,7 +45,7 @@ class Ingreso extends Page /*implements HasForms*/
     public $material = [];
 
 
-    public ?Ordene $orden1 = null;
+    public $orden1;
 
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
@@ -55,17 +56,20 @@ class Ingreso extends Page /*implements HasForms*/
     public function mount(?int $ordenId = null): void
     {
         if ($ordenId) {
-            $this->orden = Ordene::with('materiales.serializado')->findOrFail($ordenId); // Cargar la orden
+            $this->orden1 = $ordenId;
+            $this->orden = Ordene::with('materiales')->findOrFail($ordenId); // Cargar la orden
             $this->form->fill($this->orden->toArray()); // Llenar el formulario
 
             $this->material = $this->orden->materiales->map(function ($material) {
+
                 return [
                     'material_id' => $material->id,
                     'cantidad' => $material->pivot->cantidad,
-                    'serializado_id' => $material->serializado->serie ?? null,
-                    'estado_id' => $material->serializado->estado ?? null,
+                    'serializado_id' => $material->pivot->serializado_id,
+                    'estado_id' => optional($material->serializados->where('id', $material->pivot->serializado_id)->first())->estado,
                 ];
             })->toArray();
+            //dd($this->material);
         }
         //  $this->orden1 = $orden;
 
@@ -92,7 +96,7 @@ class Ingreso extends Page /*implements HasForms*/
          dd($tamano);*/
         //$data = $this->form->getState();
 
-        dd($this->orden);
+        dd(Ordene::find($this->orden1));
         /*
                 foreach ($this->material as $fila) {
                    // dump($fila['serializado_id']);
@@ -108,6 +112,7 @@ class Ingreso extends Page /*implements HasForms*/
     {
         return 'admin/ingreso/{ordenId?}'; // Parámetro opcional
     }
+
     protected function getFormSchema(): array
     {
         return [
@@ -117,7 +122,6 @@ class Ingreso extends Page /*implements HasForms*/
                         ->relationship('abonado', 'plan')
                         ->label('Abonado')
                         ->required()
-                        ->default($this->orden1?->abonado_id ?? null)
                         ->placeholder('Ingrese el plan')
                         ->searchable(['plan', 'nombre'])
                         ->createOptionForm([
@@ -166,14 +170,25 @@ class Ingreso extends Page /*implements HasForms*/
             Forms\Components\Section::make('DATOS ACTA')
                 ->schema([
                     Forms\Components\DatePicker::make('fecha')
-                        ->required()
-                        ->default($this->orden1?->fecha ?? null),
-                    Forms\Components\TextInput::make('acta')
-                        ->required()
-                        ->default($this->orden1?->acta ?? null),
-                    Forms\Components\TextInput::make('ticket')
-                        ->unique()
                         ->required(),
+
+                    Forms\Components\TextInput::make('acta')
+                        ->required(),
+
+                    Forms\Components\TextInput::make('ticket')
+                        ->required()
+                        ->unique(
+                            table: 'ordenes',
+                            column: 'ticket',
+                            ignorable: function () {
+                                if ($this->orden1) {
+
+                                    return Ordene::find($this->orden1);
+                                }
+                                return null;
+                            }
+                        ),
+
                     Forms\Components\TextInput::make('manga')
                         ->required(),
 
@@ -465,17 +480,18 @@ class Ingreso extends Page /*implements HasForms*/
             $data = $this->form->getState();
             unset($data ['material']);
             $data['user_id'] = Auth()->id();
+            //dd($data);
 
-            if ($this->orden1) {
-                $val = 'actualizado';
-                $this->orden1->update($data);
-                $orden = $this->orden1;
+            if ($this->orden1 != null) {
+
+                $this->orden->update($data);
+                $orden = $this->orden;
 
             } else {
 
-                $val = 'creado';
+
                 $orden = Ordene::create($data);
-                $this->orden1 = $orden;
+
 
             }
 
@@ -501,7 +517,19 @@ class Ingreso extends Page /*implements HasForms*/
             }
 
             DB::commit();
-            dd($val);
+           // dd($val);
+
+            $this->form->fill(['fecha' => '',
+                'acta' => '',
+                'ticket' => '',
+                'manga' => '',
+                'observaciones' => '',
+                'abonado_id' => null,
+                'precio_id' => null,
+                'actividad_id' => null,
+                'ciudad_id' => null,
+                'persona_id' => null,]);
+            $this->material = [];
         } catch (\Exception $e) {
             DB::rollBack();
 

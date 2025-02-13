@@ -9,4 +9,11 @@ use Filament\Resources\Pages\EditRecord;
 class EditPrecio extends EditRecord
 {
     protected static string $resource = PrecioResource::class;
+
+    protected function  getHeaderActions(): array
+    {
+        return [
+            Actions\DeleteAction::make(),
+        ];
+    }
 }

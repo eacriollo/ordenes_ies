@@ -20,11 +20,11 @@ class Material extends Model
     public function orden(): belongsToMany
     {
         return $this->belongsToMany(Ordene::class , 'material_ordenes')
-            ->withPivot('cantidad')
+            ->withPivot('cantidad','serializado_id')
             ->withTimestamps();
     }
 
-    public function serializado()
+    public function serializados()
     {
         return $this->hasMany(Serializado::class, 'material_id');
     }

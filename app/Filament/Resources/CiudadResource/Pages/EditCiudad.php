@@ -9,4 +9,11 @@ use Filament\Resources\Pages\EditRecord;
 class EditCiudad extends EditRecord
 {
     protected static string $resource = CiudadResource::class;
+
+    protected function  getHeaderActions(): array
+    {
+        return [
+            Actions\DeleteAction::make(),
+        ];
+    }
 }

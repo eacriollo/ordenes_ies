@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('material_id')->references('id')->on('materials');
-            $table->foreign('ordene_id')->references('id')->on('ordenes');
+            $table->foreign('ordene_id')->references('id')->on('ordenes')->onDelete('cascade');
             $table->foreign('serializado_id')->references('id')->on('serializados');
         });
     }

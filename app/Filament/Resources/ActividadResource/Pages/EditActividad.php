@@ -9,4 +9,11 @@ use Filament\Resources\Pages\EditRecord;
 class EditActividad extends EditRecord
 {
     protected static string $resource = ActividadResource::class;
+
+    protected function  getHeaderActions(): array
+    {
+        return [
+            Actions\DeleteAction::make(),
+        ];
+    }
 }
