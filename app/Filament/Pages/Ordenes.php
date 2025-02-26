@@ -3,16 +3,26 @@
 namespace App\Filament\Pages;
 
 //use Filament\Actions\DeleteAction;
+use App\Exports\OrdenesExporter;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
+
 //use Filament\Actions\EditAction;
 use Filament\Pages\Page;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Tables\Actions\ExportAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Table;
 use App\Models\Ordene;
+use Matrix\Builder;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use Maatwebsite\Excel\Facades\Excel;
+use Filament\Forms\Components\DatePicker;
+
 
 class Ordenes extends Page implements HasTable
 {
@@ -26,6 +36,33 @@ class Ordenes extends Page implements HasTable
     {
         return $table
             ->query(Ordene::query())
+            ->headerActions([
+                ExportAction::make('exportar')
+                    ->label('Exportar órdenes')
+                    ->color('success')
+                    ->form([
+                        DatePicker::make('fecha_inicio')
+                            ->label('Fecha de inicio')
+                            ->required(),
+                        DatePicker::make('fecha_fin')
+                            ->label('Fecha de fin')
+                            ->required(),
+                    ])
+                    ->action(function (array $data) {
+                        return Excel::download(new OrdenesExporter($data['fecha_inicio'], $data['fecha_fin']),
+                            'ordenes_' . $data['fecha_inicio'] . '_a_' . $data['fecha_fin'] . '.xlsx'
+                        );
+                    })
+                    ->after(function () {
+                        Notification::make()
+                            ->title('Exportación completada')
+                            ->body('El archivo se ha descargado correctamente.')
+                            ->success()
+                            ->send();
+                    }),
+
+
+            ])
             ->columns([
                 TextColumn::make('acta')
                     ->label('ACTA'),
@@ -52,10 +89,11 @@ class Ordenes extends Page implements HasTable
                     ->label('Eliminar')
                     ->successNotificationTitle('Registro eliminado correctamente'),
                 EditAction::make()->label('Editar')
-                    ->url(fn (Ordene $record) => route('filament.admin.pages.admin.ingreso.{ordenId?}', ['ordenId' => $record->id]))
+                    ->url(fn(Ordene $record) => route('filament.admin.pages.admin.ingreso.{ordenId?}', ['ordenId' => $record->id]))
 
             ])->bulkActions([
-
+                // ExportBulkAction::make()
             ]);
     }
+
 }

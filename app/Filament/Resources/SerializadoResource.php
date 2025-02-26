@@ -2,10 +2,15 @@
 
 namespace App\Filament\Resources;
 
+use App\Exports\EquiposExporter;
 use App\Filament\Resources\SerializadoResource\Pages;
 use App\Filament\Resources\SerializadoResource\RelationManagers;
+use App\Imports\equiposNuevosImport;
 use App\Models\Material;
 use App\Models\Serializado;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
+use Filament\Tables\Actions\ExportAction;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,6 +18,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SerializadoResource extends Resource
 {
@@ -29,7 +36,6 @@ class SerializadoResource extends Resource
                     ->unique('serializados', 'serie')
                     ->maxLength(255),
                 Forms\Components\DatePicker::make('fecha')
-
                     ->required(),
                 Forms\Components\Select::make('estado')
                     ->options([
@@ -52,6 +58,33 @@ class SerializadoResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([
+                ExportAction::make('exportar')
+                    ->label('Reporte')
+                    ->color('success')
+                    ->form([
+                        Forms\Components\DatePicker::make('fecha_inicio')
+                            ->label('Fecha de inicio')
+                            ->required(),
+                        Forms\Components\DatePicker::make('fecha_fin')
+                            ->label('Fecha de fin')
+                            ->required(),
+                    ])
+                    ->action(function (array $data) {
+                        return Excel::download(new EquiposExporter($data['fecha_inicio'], $data['fecha_fin']),
+                            'Equipos_' . $data['fecha_inicio'] . '_a_' . $data['fecha_fin'] . '.xlsx'
+                        );
+                    })
+                    ->after(function () {
+                        Notification::make()
+                            ->title('Exportación completada')
+                            ->body('El archivo se ha descargado correctamente.')
+                            ->success()
+                            ->send();
+                    }),
+
+
+            ])
             ->columns([
                 Tables\Columns\TextColumn::make('serie')
                     ->searchable(),
@@ -61,7 +94,6 @@ class SerializadoResource extends Resource
                 Tables\Columns\TextColumn::make('estado'),
                 Tables\Columns\TextColumn::make('material.nombre')
                     ->label('Nombre')
-
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -78,6 +110,7 @@ class SerializadoResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

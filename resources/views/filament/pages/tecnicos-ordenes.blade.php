@@ -6,5 +6,3 @@
 
 
 </x-filament-panels::page>
-
-

@@ -9,6 +9,8 @@ use App\Models\Material;
 use App\Models\Ordene;
 use App\Models\Persona;
 use App\Models\serializado;
+use App\Models\MaterialOrdene;
+use Carbon\Carbon;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Fieldset;
 use App\Models\Precio;
@@ -17,12 +19,17 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Forms;
+use Filament\Notifications\Actions;
 use Filament\Notifications\Notification;
+use Filament\Notifications\Livewire\Notifications;
+use Filament\Support\Enums\Alignment;
 use Filament\Pages\Page;
 use Filament\Forms\Components\Repeater;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use function Laravel\Prompts\alert;
+
+use Illuminate\View\View;
+use Livewire\Component;
 
 class Ingreso extends Page /*implements HasForms*/
 {
@@ -30,12 +37,16 @@ class Ingreso extends Page /*implements HasForms*/
 
     public Ordene $orden;
 
+    public $mostrarModalConfirmacion = false;
+    public $mensajeAdvertencia = '';
     public $fecha;
     public $acta;
     public $ticket;
     public $manga;
     public $observaciones;
     public $abonado_id;
+
+    public $abonadoTemp = null;
     public $precio_id;
     public $actividad_id;
     public $ciudad_id;
@@ -69,43 +80,17 @@ class Ingreso extends Page /*implements HasForms*/
                     'estado_id' => optional($material->serializados->where('id', $material->pivot->serializado_id)->first())->estado,
                 ];
             })->toArray();
-            //dd($this->material);
+
         }
-        //  $this->orden1 = $orden;
-
-        /*      $this->form->fill([
-                  'fecha' => '',
-                  'acta' => '',
-                  'ticket' => '',
-                  'manga' => '',
-                  'observaciones' => '',
-                  'abonado_id' => null,
-                  'precio_id' => null,
-                  'actividad_id' => null,
-                  'ciudad_id' => null,
-                  'persona_id' => null,
-
-              ]);*/
 
     }
 
     public function getUser()
     {
-        /* $tamano = count($this->material);
 
-         dd($tamano);*/
-        //$data = $this->form->getState();
 
         dd(Ordene::find($this->orden1));
-        /*
-                foreach ($this->material as $fila) {
-                   // dump($fila['serializado_id']);
-                    if ($fila['serializado_id'] != null) {
-                        dump($fila['serializado_id']);
-                    }else{
-                        dump('no hay serializado');
-                    }
-                }*/
+
     }
 
     public static function getSlug(): string
@@ -120,7 +105,7 @@ class Ingreso extends Page /*implements HasForms*/
                 ->schema([
                     Forms\Components\Select::make('abonado_id')
                         ->relationship('abonado', 'plan')
-                        ->label('Abonado')
+                        ->label('Plan')
                         ->required()
                         ->placeholder('Ingrese el plan')
                         ->searchable(['plan', 'nombre'])
@@ -139,30 +124,31 @@ class Ingreso extends Page /*implements HasForms*/
                                 ->maxLength(255)
                                 ->default(null),
                         ])
-                        ->reactive()
                         ->afterStateUpdated(function ($state, callable $set) {
+                            //dd($state);
                             $abonado = Abonado::find($state);
-
                             if ($abonado) {
+                                $this->abonadoTemp = $abonado;
                                 $set('nombre_abonado', $abonado->nombre);
-                                $set('codigo_abonado', $abonado->codigo);
-                                $set('plan_abonado', $abonado->plan);
-                            } else {
-                                $set('nombre', null);
-                                $set('codigo', null);
-                                $set('plan', null);
-                            }
-                        }),
+                                // $set('codigo_abonado', $abonado->codigo);
 
-                    Forms\Components\Placeholder::make('nombre_abonado')
+                            } else {
+                                // Limpiar valores si no hay abonado seleccionado
+                                $set('nombre_abonado', null);
+                                $set('codigo_abonado', null);
+
+                            }
+
+                        })->reactive(),
+
+                    Forms\Components\Placeholder::make('nombre_abonado_placeholder')
                         ->label('Abonado')
-                        ->content(fn($get) => $get('nombre_abonado') ?? ''),
-                    Forms\Components\Placeholder::make('codigo_abonado')
-                        ->label('codigo')
-                        ->content(fn($get) => $get('codigo_abonado') ?? ''),
-                    forms\Components\Placeholder::make('plan_abonado')
-                        ->label('plan')
-                        ->content(fn($get) => $get('plan_abonado') ?? ''),
+                        ->reactive()
+                        ->content(fn() => $this->abonadoTemp ? $this->abonadoTemp->nombre : ''),
+
+                    Forms\Components\Placeholder::make('codigo_abonado_placeholder')
+                        ->label('Código')
+                        ->content(fn() => $this->abonadoTemp ? $this->abonadoTemp->codigo : ''),
 
 
                 ])->columns(4)
@@ -250,37 +236,60 @@ class Ingreso extends Page /*implements HasForms*/
                                 ->required(),
 
                             Forms\Components\Select::make('serializado_id')
+                                ->relationship('serializados', 'serie')
                                 ->label('Serie')
                                 ->required()
-                                ->options(function (callable $get) {
+                                ->options(function (callable $get, $state) {
                                     $materialId = $get('material_id');
                                     return $materialId
-                                        ? serializado::where('material_id', $materialId)->pluck('serie', 'id')->toArray()
+                                        ? Serializado::where('material_id', $materialId)->pluck('serie', 'id')
+                                            ->where('estado', 'Disponible')
+                                            ->toArray()
                                         : [];
                                 })
+                                ->unique('material_ordenes', 'serializado_id')
                                 ->searchable()
                                 ->hidden(function (callable $get) {
                                     $materialId = $get('material_id');
                                     $material = Material::find($materialId);
                                     return $material && $material->tipo == 'generico';
                                 })
-                                ->reactive(),
-                            Forms\Components\Select::make('estado_id')
-                                ->label('Estado')
-                                ->required()
-                                ->options(function (callable $get) {
-                                    $materialId = $get('material_id');
-                                    // Filtrar estados solo para el material seleccionado
-                                    return $materialId
-                                        ? ['Disponible' => 'Disponible',
+                                ->reactive()
+                                ->createOptionForm([
+                                    Forms\Components\TextInput::make('serie')
+                                        ->label('Serie')
+                                        ->required()
+                                        ->unique('serializados', 'serie'),
+                                    // ->validationRules(['unique:serializados,serie'])
+                                    Forms\Components\DatePicker::make('fecha'),
+                                    Forms\Components\Select::make('estado')
+                                        ->options([
+                                            'Disponible' => 'Disponible',
                                             'Vendido' => 'Vendido',
                                             'Instalado' => 'Instalado',
                                             'Dañado' => 'Dañado',
                                             'Devuelto' => 'Devuelto',
-                                            'Retirado' => 'Retirado',]
-                                        : [];
-                                })
-                                ->searchable()
+                                            'Retirado' => 'Retirado',
+                                        ])
+                                        ->required(),
+                                    Forms\Components\Select::make('material_id')
+                                        ->relationship('material', 'nombre')
+                                        ->options(Material::where('tipo', 'serializado')->pluck('nombre', 'id')->toArray())
+                                        ->searchable()
+                                        ->required(),
+                                ]),
+
+                            Forms\Components\Select::make('estado_id')
+                                ->label('Estado')
+                                ->required()
+                                ->options([ // Opciones de estado
+                                    'Disponible' => 'Disponible',
+                                    'Vendido' => 'Vendido',
+                                    'Instalado' => 'Instalado',
+                                    'Dañado' => 'Dañado',
+                                    'Devuelto' => 'Devuelto',
+                                    'Retirado' => 'Retirado',
+                                ])
                                 ->hidden(function (callable $get) {
                                     // Ocultar este campo si el material seleccionado no es serializado
                                     $materialId = $get('material_id');
@@ -289,187 +298,15 @@ class Ingreso extends Page /*implements HasForms*/
                                 })
                                 ->reactive(),
 
-                        ])->columns(4),
+                        ])->columns(4)
+                        ->model(Material::class),
                 ])
-            //  ->model(Ordene::class)
-            // ->columns(3)
+
 
         ];
-        // ->model($this->orden);
+
     }
 
-    /*    public function form(Form $form): Form
-        {
-            return $form
-                ->schema([
-
-                    Forms\Components\Section::make('DATOS ABONADO')
-                        ->schema([
-                            Forms\Components\Select::make('abonado_id')
-                                ->relationship('abonado', 'plan')
-                                ->label('Abonado')
-                                ->required()
-                                ->placeholder('Ingrese el plan')
-                                ->searchable(['plan', 'nombre'])
-                                ->createOptionForm([
-                                    Forms\Components\TextInput::make('nombre')
-                                        ->maxLength(255)
-                                        ->default(null),
-                                    Forms\Components\TextInput::make('plan')
-                                        ->maxLength(255)
-                                        ->unique(ignoreRecord: true)
-                                        ->validationMessages([
-                                            'unique' => 'El abonado ya existe'
-                                        ])
-                                        ->default(null),
-                                    Forms\Components\TextInput::make('codigo')
-                                        ->maxLength(255)
-                                        ->default(null),
-                                ])
-                                ->reactive()
-                                ->afterStateUpdated(function ($state, callable $set) {
-                                    $abonado = Abonado::find($state);
-
-                                    if ($abonado) {
-                                        $set('nombre_abonado', $abonado->nombre);
-                                        $set('codigo_abonado', $abonado->codigo);
-                                        $set('plan_abonado', $abonado->plan);
-                                    } else {
-                                        $set('nombre', null);
-                                        $set('codigo', null);
-                                        $set('plan', null);
-                                    }
-                                }),
-
-                            Forms\Components\Placeholder::make('nombre_abonado')
-                                ->label('Abonado')
-                                ->content(fn($get) => $get('nombre_abonado') ?? ''),
-                            Forms\Components\Placeholder::make('codigo_abonado')
-                                ->label('codigo')
-                                ->content(fn($get) => $get('codigo_abonado') ?? ''),
-                            forms\Components\Placeholder::make('plan_abonado')
-                                ->label('plan')
-                                ->content(fn($get) => $get('plan_abonado') ?? ''),
-
-
-                        ])->columns(4),
-                    Forms\Components\Section::make('DATOS ACTA')
-                        ->schema([
-                            Forms\Components\DatePicker::make('fecha')
-                                ->required(),
-                            Forms\Components\TextInput::make('acta')
-                                ->required(),
-                            Forms\Components\TextInput::make('ticket')
-                                ->unique()
-                                ->required(),
-                            Forms\Components\TextInput::make('manga')
-                                ->required(),
-
-
-                            Forms\Components\Select::make('precio_id')
-                                //->relationship('precio', 'precio')
-                                ->label('Precio')
-                                ->options(Precio::where('activo', 1)->pluck('precio', 'id')->toArray())
-                                ->searchable()
-                                ->placeholder('Ingrese el precio')
-                                ->required()
-                                ->optionsLimit(5),
-
-                            Forms\Components\Select::make('actividad_id')
-                                ->label('Actividad')
-                                ->options(Actividad::pluck('tipo_actividad', 'id')->toArray())
-                                ->searchable()
-                                ->placeholder('Ingrese el actividad')
-                                ->required()
-                                ->optionsLimit(5),
-
-                            forms\Components\Select::make('ciudad_id')
-                                ->label('Ciudad')
-                                ->options(Ciudad::pluck('nombre', 'id')->toArray())
-                                ->searchable()
-                                ->placeholder('Ingrese la ciudad')
-                                ->required()
-                                ->optionsLimit(5),
-
-                            Forms\Components\Select::make('persona_id')
-                                ->label('Persona')
-                                ->options(Persona::pluck('nombre', 'id')->toArray())
-                                ->searchable()
-                                ->placeholder('Ingrese el persona')
-                                ->required()
-                                ->optionsLimit(5),
-
-                            Forms\Components\Textarea::make('observaciones')->required(),
-                        ])->columns(3),
-
-                    Forms\Components\Section::make('MATERIAL')
-                        ->schema([
-
-                            Forms\Components\Repeater::make('material')
-                                ->schema([
-                                    Forms\Components\Select::make('material_id')
-                                        ->label('Material')
-                                        ->required()
-                                        ->options(Material::pluck('nombre', 'id')->toArray())
-                                        ->searchable()
-                                        ->reactive()
-                                        ->afterStateUpdated(function ($state, callable $set) {
-                                            $set('serializado_id', null);
-                                            $set('estado_id', null);
-                                        }),
-                                    Forms\Components\TextInput::make('cantidad')
-                                        ->label('Cantidad')
-                                        ->required(),
-
-                                    Forms\Components\Select::make('serializado_id')
-                                        ->label('Serie')
-                                        ->required()
-                                        ->options(function (callable $get) {
-                                            $materialId = $get('material_id');
-                                            return $materialId
-                                                ? serializado::where('material_id', $materialId)->pluck('serie', 'id')->toArray()
-                                                : [];
-                                        })
-                                        ->searchable()
-                                        ->hidden(function (callable $get) {
-                                            $materialId = $get('material_id');
-                                            $material = Material::find($materialId);
-                                            return $material && $material->tipo == 'generico';
-                                        })
-                                        ->reactive(),
-                                    Forms\Components\Select::make('estado_id')
-                                        ->label('Estado')
-                                        ->required()
-                                        ->options(function (callable $get) {
-                                            $materialId = $get('material_id');
-                                            // Filtrar estados solo para el material seleccionado
-                                            return $materialId
-                                                ? ['Disponible' => 'Disponible',
-                                                    'Vendido' => 'Vendido',
-                                                    'Instalado' => 'Instalado',
-                                                    'Dañado' => 'Dañado',
-                                                    'Devuelto' => 'Devuelto',
-                                                    'Retirado' => 'Retirado',]
-                                                : [];
-                                        })
-                                        ->searchable()
-                                        ->hidden(function (callable $get) {
-                                            // Ocultar este campo si el material seleccionado no es serializado
-                                            $materialId = $get('material_id');
-                                            $material = Material::find($materialId);
-                                            return $material && $material->tipo === 'generico';
-                                        })
-                                        ->reactive(),
-
-                                ])->columns(4),
-                        ])
-
-
-                ])
-                //->statePath('data')
-                ->model(Ordene::class)
-                ->columns(3);
-        }*/
 
     public function guardar(): void
     {
@@ -478,6 +315,7 @@ class Ingreso extends Page /*implements HasForms*/
 
         try {
             $data = $this->form->getState();
+            //dd($data);
             unset($data ['material']);
             $data['user_id'] = Auth()->id();
             //dd($data);
@@ -488,7 +326,6 @@ class Ingreso extends Page /*implements HasForms*/
                 $orden = $this->orden;
 
             } else {
-
 
                 $orden = Ordene::create($data);
 
@@ -517,7 +354,7 @@ class Ingreso extends Page /*implements HasForms*/
             }
 
             DB::commit();
-           // dd($val);
+
 
             $this->form->fill(['fecha' => '',
                 'acta' => '',
@@ -530,34 +367,61 @@ class Ingreso extends Page /*implements HasForms*/
                 'ciudad_id' => null,
                 'persona_id' => null,]);
             $this->material = [];
+
+            $this->abonadoTemp = null;
+
+            Notification::make()
+                ->title($this->orden1 ? 'Orden actualizada' : 'Orden guardada')
+                ->body($this->orden1 ? 'Se actualizó correctamente.' : 'Se guardó correctamente.')
+                ->success()
+                ->send();
+
+            $fechaOrden = Carbon::parse($data['fecha']);
+            $fechaLimite = $fechaOrden->copy()->subDays(30);
+            $ordenExistente = Ordene::where('abonado_id', $data['abonado_id'])
+                ->where('fecha', '>=', $fechaLimite)
+                ->where('fecha', '<', $fechaOrden)
+                ->exists();
+            if ($ordenExistente) {
+
+                Notification::make()
+                    ->title('Advertencia')
+                    ->body('Este abonado tiene una orden registrada en los últimos 30 días.')
+                    ->danger()
+                    ->persistent()
+                    ->color('danger')
+                    ->send();
+            }
+
+
         } catch (\Exception $e) {
             DB::rollBack();
 
-            dd($e);
+            //dd($e);
+
+            Notification::make()
+                ->title('Error')
+                ->body('Ocurrió un error: ' . $e->getMessage())
+                ->danger()
+                ->send();
         }
 
 
-        /*
-                Ordene::create($data);
-
-                $this->form->fill(['fecha' => '',
-                    'acta' => '',
-                    'ticket' => '',
-                    'manga' => '',
-                    'observaciones' => '',
-                    'abonado_id' => null,
-                    'precio_id' => null,
-                    'actividad_id' => null,
-                    'ciudad_id' => null,
-                    'persona_id' => null,]);
-
-        */
-        /*
-        if($this->material['serializado_id'] != null){
-
-
-        }*/
     }
+
+    /*  public function mostrarConfirmacion($abonadoId)
+      {
+          TableAction::make('advertencia')
+              ->label('Advertencia')
+              ->icon('heroicon-o-exclamation')
+              ->color('warning')
+              ->requiresConfirmation()
+              ->modalHeading('Advertencia sobre orden existente')
+              ->modalDescription('Este abonado tiene una orden registrada en los últimos 30 días. ¿Desea continuar?')
+              ->modalSubmitActionLabel('Aceptar')
+              ->action(fn () => null) // No realiza ninguna acción, solo cierra el modal
+              ->send();
+      }*/
 
 
     public function getHeaderActions(): array
@@ -565,16 +429,11 @@ class Ingreso extends Page /*implements HasForms*/
 
         return [
             Action::make('guardar')
-                ->label('GUARDAR')
+                ->label('Guardar')
                 ->action(function () {
                     $this->guardar();
-                    Notification::make('Se guardo correctamente')
-                        ->success()
-                        ->body('Se guardo correctamente')
-                        ->color('success')
-                        ->send();
-
                 }),
+
 
             Action::make('User')
                 ->label('getUser')

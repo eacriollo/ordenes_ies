@@ -20,6 +20,9 @@ class serializado extends Model
        return $this->belongsTo(Material::class);
    }
 
-
+    public function materialOrdene()
+    {
+        return $this->hasOne(MaterialOrdene::class);
+    }
 
 }
