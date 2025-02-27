@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\CiudadResource\Pages;
-use App\Filament\Resources\CiudadResource\RelationManagers;
-use App\Models\Ciudad;
+use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -12,30 +12,37 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-
-class CiudadResource extends Resource
+class UserResource extends Resource
 {
-    protected static ?string $model = Ciudad::class;
+    protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
-
-    protected static ?string $navigationLabel = 'Ciudades';
-
-    protected static ?string $navigationGroup = 'Mantenimiento';
+    protected static ?string $navigationIcon = 'heroicon-s-user-group';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('nombre')
+                Forms\Components\TextInput::make('name')
                     ->required()
-                    ->unique(ignoreRecord: true)
-                    ->validationMessages(['unique' =>'La ciudad ya existe'])
                     ->maxLength(255),
-                Forms\Components\Toggle::make('activo')
-                    ->required(),
+                Forms\Components\TextInput::make('email')
+                    ->email()
+                    ->required()
+                    ->maxLength(255),
+
+                Forms\Components\TextInput::make('password')
+                    ->password()
+                    ->required(fn($record) => $record === null)
+                    ->hidden( fn ($record)=> $record!==null)
+
+
+                    ->maxLength(255),
+                Forms\Components\Select::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable(),
             ]);
     }
 
@@ -43,10 +50,13 @@ class CiudadResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nombre')
+                Tables\Columns\TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\IconColumn::make('activo')
-                    ->boolean(),
+                Tables\Columns\TextColumn::make('email')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('email_verified_at')
+                    ->dateTime()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -60,15 +70,11 @@ class CiudadResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('Editar'),
-                Tables\Actions\DeleteAction::make()
-                    ->label('Eliminar'),
+                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    ExportBulkAction::make()
                 ]),
             ]);
     }
@@ -83,9 +89,9 @@ class CiudadResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCiudads::route('/'),
-            'create' => Pages\CreateCiudad::route('/create'),
-            'edit' => Pages\EditCiudad::route('/{record}/edit'),
+            'index' => Pages\ListUsers::route('/'),
+            'create' => Pages\CreateUser::route('/create'),
+            'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 }

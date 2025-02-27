@@ -1,13 +1,17 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Filament\Pages\Widgets;
 
 
 use Filament\Widgets\ChartWidget;
+
+use Filament\Widgets\Widget;
 use Livewire\Attributes\On;
 
 class TecnicosChart extends ChartWidget
 {
+
+
 
     protected static ?string $heading = 'Chart';
 
@@ -20,7 +24,7 @@ class TecnicosChart extends ChartWidget
     public function actualizarDatos($datos)
     {
         $this->chartData = $datos;
-        //dd($this->chartData);
+
     }
 
 
@@ -49,8 +53,7 @@ class TecnicosChart extends ChartWidget
         return 'bar';
     }
 
-    /*public static function canView(): bool
-    {
-        return true;
-    }*/
+
+
+
 }

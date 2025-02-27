@@ -2,12 +2,12 @@
 
 namespace App\Exports;
 
-use App\Models\materialOrdene;
+
 use App\Models\serializado;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use App\Models\Material;
+
 
 class EquiposExporter implements FromCollection, WithHeadings, WithMapping
 {

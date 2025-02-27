@@ -21,7 +21,7 @@ class MaterialResource extends Resource
 
     protected static ?string $navigationLabel = 'Material';
 
-   // protected static ?string $label = 'Material';
+    protected static ?string $navigationGroup = 'Mantenimiento';
 
     public static function form(Form $form): Form
     {

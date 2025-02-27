@@ -20,6 +20,8 @@ class ActividadResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
 
+    protected static ?string $navigationGroup = 'Mantenimiento';
+
 
 
     protected static ?string $navigationLabel = 'Actividades';

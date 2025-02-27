@@ -9,27 +9,17 @@ use App\Models\Material;
 use App\Models\Ordene;
 use App\Models\Persona;
 use App\Models\serializado;
-use App\Models\MaterialOrdene;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Carbon\Carbon;
-use Filament\Actions\CreateAction;
-use Filament\Forms\Components\Fieldset;
 use App\Models\Precio;
 use Filament\Actions\Action;
 use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Forms;
-use Filament\Notifications\Actions;
 use Filament\Notifications\Notification;
-use Filament\Notifications\Livewire\Notifications;
-use Filament\Support\Enums\Alignment;
 use Filament\Pages\Page;
-use Filament\Forms\Components\Repeater;
+use Illuminate\Contracts\Auth\Access\Authorizable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
-use Illuminate\View\View;
-use Livewire\Component;
 
 class Ingreso extends Page /*implements HasForms*/
 {
@@ -58,10 +48,19 @@ class Ingreso extends Page /*implements HasForms*/
 
     public $orden1;
 
+   /* public static function canAccess(Authorizable $user): bool
+    {
+        return $user->can(); // Asegúrate de que el permiso
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    }*/
+
+    use HasPageShield;
+
+    protected static ?string $navigationIcon = 'heroicon-m-plus';
 
     protected static string $view = 'filament.pages.ingreso';
+
+    protected static ?string $navigationGroup = 'Resgistro';
 
 
     public function mount(?int $ordenId = null): void
@@ -408,20 +407,6 @@ class Ingreso extends Page /*implements HasForms*/
 
 
     }
-
-    /*  public function mostrarConfirmacion($abonadoId)
-      {
-          TableAction::make('advertencia')
-              ->label('Advertencia')
-              ->icon('heroicon-o-exclamation')
-              ->color('warning')
-              ->requiresConfirmation()
-              ->modalHeading('Advertencia sobre orden existente')
-              ->modalDescription('Este abonado tiene una orden registrada en los últimos 30 días. ¿Desea continuar?')
-              ->modalSubmitActionLabel('Aceptar')
-              ->action(fn () => null) // No realiza ninguna acción, solo cierra el modal
-              ->send();
-      }*/
 
 
     public function getHeaderActions(): array

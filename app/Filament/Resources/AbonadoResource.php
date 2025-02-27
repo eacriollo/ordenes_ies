@@ -17,7 +17,9 @@ class AbonadoResource extends Resource
 {
     protected static ?string $model = Abonado::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static ?string $navigationIcon = 'heroicon-m-user-plus';
+
+    protected static ?string $navigationGroup = 'Resgistro';
 
     public static function form(Form $form): Form
     {

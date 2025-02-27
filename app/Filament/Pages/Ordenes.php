@@ -2,35 +2,33 @@
 
 namespace App\Filament\Pages;
 
-//use Filament\Actions\DeleteAction;
+
 use App\Exports\OrdenesExporter;
-use Filament\Actions\Action;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Notifications\Notification;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
-
-//use Filament\Actions\EditAction;
 use Filament\Pages\Page;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Actions\ExportAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Table;
 use App\Models\Ordene;
-use Matrix\Builder;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Maatwebsite\Excel\Facades\Excel;
 use Filament\Forms\Components\DatePicker;
 
 
 class Ordenes extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use InteractsWithTable, HasPageShield;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
 
     protected static string $view = 'filament.pages.ordenes';
+
+    protected static ?string $navigationGroup = 'Resgistro';
 
     public static function table(Table $table): Table
     {

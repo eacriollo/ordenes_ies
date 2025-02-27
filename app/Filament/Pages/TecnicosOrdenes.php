@@ -2,9 +2,10 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\TecnicosChart;
+use App\Filament\Pages\Widgets\TecnicosChart;
 use App\Models\Ordene;
 use App\Models\Persona;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -16,15 +17,16 @@ use Filament\Forms;
 class TecnicosOrdenes extends Page
 {
 
-    use InteractsWithForms;
+    use InteractsWithForms, HasPageShield;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     protected static string $view = 'filament.pages.tecnicos-ordenes';
 
+    protected static ?string $navigationGroup = 'Reportes';
+
     public $mesSeleccionado;
     public $tecnicoSeleccionado;
-
 
 
     protected function getFormSchema(): array
@@ -36,7 +38,6 @@ class TecnicosOrdenes extends Page
                         ->format('Y-m')
                         ->required()
                         ->label('Seleccionar Mes'),
-
 
 
                     Select::make('tecnicoSeleccionado')
@@ -84,49 +85,13 @@ class TecnicosOrdenes extends Page
             ->get()
             ->pluck('cantidad', 'actividad.tipo_actividad')
             ->toArray();
-      // dd($datos);
-        //->get();
 
-     /*   $chartData = [
-            'labels' => array_keys($datos),
-            'datasets' => [
-                [
-                    'label' => 'Ordenes',
-                    'data' => array_values($datos),
-                    'backgroundColor' => 'rgba(54, 162, 235, 0.6)',
-                ],
-            ],
-        ];*/
 
         $this->dispatch('actualizarDatosTecnicosChart', datos: $datos);
 
-        //TecnicosChart::class->tecnicosChart($datos);
-       //$this->updateChartData($chartData);
 
     }
 
-    /*protected function updateChartData(array $chartData)
-    {
-        // Obtener el widget de la página
-        $widget = $this->TecnicosChart::class;
-
-        // Actualizar la propiedad pública del widget
-        if ($widget) {
-            $widget->chartData = $chartData;
-        }
-    }*/
-
-    /*protected function getWidget(string $widgetClass): ?Widget
-    {
-        // Buscar el widget en los widgets registrados
-        foreach ($this->getVisibleWidgets() as $widget) {
-            if ($widget instanceof $widgetClass) {
-                return $widget;
-            }
-        }
-
-        return null;
-    }*/
 
     protected function getFooterWidgets(): array
     {
@@ -134,6 +99,7 @@ class TecnicosOrdenes extends Page
             TecnicosChart::class,
         ];
     }
+
 
 
 

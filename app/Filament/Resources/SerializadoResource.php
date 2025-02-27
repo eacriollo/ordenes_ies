@@ -25,7 +25,9 @@ class SerializadoResource extends Resource
 {
     protected static ?string $model = Serializado::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-m-wifi';
+
+    protected static ?string $navigationGroup = 'Mantenimiento';
 
     public static function form(Form $form): Form
     {
